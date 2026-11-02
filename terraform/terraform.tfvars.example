@@ -1,0 +1,8 @@
+aws_region    = "us-east-1"
+frontend_origin = "*"
+image_tag = "latest"
+deploy_services = false
+db_username = "appuser"
+media_bucket_name = "BUCKET_CREATED_IN_AWS"
+ecs_execution_role_arn = "arn:aws:iam::ACCOUNT_ID:role/LabRole"
+backend_task_role_arn = "arn:aws:iam::ACCOUNT_ID:role/LabRole"

@@ -1,0 +1,16 @@
+# Wygodne uruchomienie lokalne. Moduły są niezależne – każdy ma własny Dockerfile
+# i można go hostować osobno (patrz README).
+services:
+  backend:
+    build: ./backend
+    ports: ["8080:8080"]
+    environment:
+      CORS_ORIGINS: http://localhost:4200
+    volumes: ["uploads:/data/uploads"]
+  frontend:
+    build: ./frontend
+    ports: ["4200:80"]
+    environment:
+      API_URL: http://localhost:8080/api
+volumes:
+  uploads:
