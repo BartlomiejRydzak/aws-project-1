@@ -52,6 +52,17 @@ variable "media_bucket_name" {
   type        = string
 }
 
+variable "alarm_notification_email" {
+  description = "Adres email odbierający powiadomienia alarmów CloudWatch; subskrypcję trzeba potwierdzić z wiadomości SNS"
+  type        = string
+}
+
+variable "alb_response_time_threshold_seconds" {
+  description = "Próg średniego czasu odpowiedzi backendu ALB w sekundach"
+  type        = number
+  default     = 3
+}
+
 data "aws_caller_identity" "current" {}
 
 output "aws_account_id" {

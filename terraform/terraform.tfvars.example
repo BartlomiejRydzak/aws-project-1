@@ -4,5 +4,7 @@ image_tag = "latest"
 deploy_services = false
 db_username = "appuser"
 media_bucket_name = "BUCKET_CREATED_IN_AWS"
+alarm_notification_email = "you@example.com"
+alb_response_time_threshold_seconds = 3
 ecs_execution_role_arn = "arn:aws:iam::ACCOUNT_ID:role/LabRole"
 backend_task_role_arn = "arn:aws:iam::ACCOUNT_ID:role/LabRole"

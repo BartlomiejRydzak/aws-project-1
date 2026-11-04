@@ -25,7 +25,19 @@ public class ChatController {
 
     /** GET 1: wiadomości (opcjonalnie tylko nowsze niż ?after=ID – używane przy odpytywaniu). */
     @GetMapping("/messages")
-    public List<Message> messages(@RequestParam(defaultValue = "0") long after) {
+    public List<Message> messages(
+            @RequestParam(defaultValue = "0") long after,
+            @RequestParam(defaultValue = "0") long delayMs) {
+        // Deliberate latency hook for the CloudWatch alarm exercise. Cap it to 15 seconds.
+        long boundedDelayMs = Math.max(0, Math.min(delayMs, 15_000));
+        if (boundedDelayMs > 0) {
+            try {
+                Thread.sleep(boundedDelayMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Request interrupted.");
+            }
+        }
         return store.messagesAfter(after);
     }
 

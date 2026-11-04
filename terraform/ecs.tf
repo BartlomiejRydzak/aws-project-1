@@ -5,12 +5,14 @@ resource "aws_ecs_cluster" "main" {
 resource "aws_ecr_repository" "backend" {
   name                 = "projekt1-backend"
   image_tag_mutability = "MUTABLE"
+  force_delete         = true
   image_scanning_configuration { scan_on_push = true }
 }
 
 resource "aws_ecr_repository" "frontend" {
   name                 = "projekt1-frontend"
   image_tag_mutability = "MUTABLE"
+  force_delete         = true
   image_scanning_configuration { scan_on_push = true }
 }
 
@@ -30,6 +32,16 @@ resource "aws_cloudwatch_log_group" "frontend" {
   retention_in_days = 14
 }
 
+resource "aws_sns_topic" "api_latency" {
+  name = "projekt1-api-latency"
+}
+
+resource "aws_sns_topic_subscription" "api_latency_email" {
+  topic_arn = aws_sns_topic.api_latency.arn
+  protocol  = "email"
+  endpoint  = var.alarm_notification_email
+}
+
 resource "aws_lb" "app" {
   name               = "projekt1-app-alb"
   internal           = false
@@ -47,6 +59,27 @@ resource "aws_lb_target_group" "backend" {
   health_check {
     path    = "/actuator/health"
     matcher = "200"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "backend_response_time" {
+  alarm_name          = "projekt1-backend-response-time-high"
+  alarm_description   = "Średni czas odpowiedzi backendu ALB przekroczył skonfigurowany próg."
+  namespace           = "AWS/ApplicationELB"
+  metric_name         = "TargetResponseTime"
+  statistic           = "Average"
+  period              = 60
+  evaluation_periods  = 1
+  datapoints_to_alarm = 1
+  threshold           = var.alb_response_time_threshold_seconds
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.api_latency.arn]
+  ok_actions          = [aws_sns_topic.api_latency.arn]
+
+  dimensions = {
+    LoadBalancer = aws_lb.app.arn_suffix
+    TargetGroup  = aws_lb_target_group.backend.arn_suffix
   }
 }
 
@@ -187,4 +220,12 @@ output "backend_ecr_repository_url" {
 
 output "frontend_ecr_repository_url" {
   value = aws_ecr_repository.frontend.repository_url
+}
+
+output "api_latency_alarm_name" {
+  value = aws_cloudwatch_metric_alarm.backend_response_time.alarm_name
+}
+
+output "api_latency_sns_topic_arn" {
+  value = aws_sns_topic.api_latency.arn
 }

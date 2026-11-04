@@ -39,7 +39,7 @@ Hostując na różnych serwerach ustaw `CORS_ORIGINS` (backend) na adres fronten
 
 W chmurze aplikacja korzysta z Cognito (rejestracja i logowanie; nowi użytkownicy są automatycznie potwierdzani przez trigger Lambda, bez weryfikacji adresu e-mail), PostgreSQL RDS (użytkownicy i wiadomości), S3 (multimedia) oraz dwóch niezależnych usług ECS Fargate (frontend i backend). W zwykłym koncie Terraform tworzy role IAM. W AWS Academy Learner Lab użyj dostarczonej przez laboratorium roli, jeśli jej trust policy pozwala na `ecs-tasks.amazonaws.com` i ma wymagane uprawnienia.
 
-Wdrożenie jest dwuetapowe, bo repozytoria ECR muszą istnieć przed wysłaniem obrazów, a usługi Fargate przed startem muszą mieć obrazy. W Learner Lab bucket S3 jest przekazywany jako istniejący data source, aby ominąć zablokowany przez SCP odczyt Object Lock; jego utworzenie może wymagać konsoli AWS. Ustaw jego nazwę i oba ARN-y ról w `terraform.tfvars`.
+Wdrożenie jest dwuetapowe, bo repozytoria ECR muszą istnieć przed wysłaniem obrazów, a usługi Fargate przed startem muszą mieć obrazy. W Learner Lab bucket S3 musi istnieć wcześniej i jest przekazywany jako data source, ponieważ SCP laboratorium blokuje wymagany Terraformowi odczyt konfiguracji Object Lock. Ustaw jego nazwę i oba ARN-y ról w `terraform.tfvars`.
 
 1. Skonfiguruj bieżące poświadczenia Learner Lab w AWS CLI. W `terraform/terraform.tfvars` ustaw region, nazwę użytkownika bazy, nazwę istniejącego bucketu oraz ARN-y gotowych ról. Hasło nie jest przechowywane w pliku; RDS generuje je i przechowuje w Secrets Manager.
 2. Uruchom `terraform init` i `terraform apply` w katalogu `terraform/`. Pierwsze zastosowanie tworzy infrastrukturę, Cognito i repozytoria ECR, ale jeszcze nie uruchamia serwisów.
@@ -55,7 +55,20 @@ Wdrożenie jest dwuetapowe, bo repozytoria ECR muszą istnieć przed wysłaniem 
    docker tag projekt1-frontend:latest "$(cd terraform && terraform output -raw frontend_ecr_repository_url):latest"
    docker push "$(cd terraform && terraform output -raw frontend_ecr_repository_url):latest"
    ```
-4. Wróć do katalogu `terraform/`, ustaw `deploy_services = true` w `terraform.tfvars` i uruchom `terraform apply` ponownie. Zachowaj tę wartość przy kolejnych zastosowaniach Terraform. Wyjście `application_url` wskazuje frontend. ALB kieruje `/api/*` do odrębnego serwisu backendu.
+4. Wróć do katalogu `terraform/`, ustaw `deploy_services = true` oraz `alarm_notification_email = "twoj-adres@example.com"` w `terraform.tfvars` i uruchom `terraform apply` ponownie. Zachowaj te wartości przy kolejnych zastosowaniach Terraform. Potwierdź subskrypcję SNS z wiadomości e-mail. Wyjście `application_url` wskazuje frontend. ALB kieruje `/api/*` do odrębnego serwisu backendu.
+
+### CloudWatch: czas odpowiedzi API
+
+ALB publikuje metrykę `AWS/ApplicationELB TargetResponseTime` dla target group backendu. Alarm `projekt1-backend-response-time-high` sprawdza średnią z okresu 60 sekund i przechodzi w stan ALARM po przekroczeniu `alb_response_time_threshold_seconds` (domyślnie 3 s). Zmiana stanu i powrót do OK są publikowane do SNS; wiadomość e-mail jest dostarczana po potwierdzeniu subskrypcji. Logi backendu znajdują się w `/ecs/projekt1-backend`.
+
+Po wdrożeniu nowego obrazu backendu wywołaj endpoint z parametrem `delayMs` (wartość ograniczona do 15000 ms), np. kilkanaście razy:
+
+```bash
+APP_URL="$(cd terraform && terraform output -raw application_url)"
+for i in $(seq 1 12); do curl -sS -o /dev/null "$APP_URL/api/messages?delayMs=5000"; done
+```
+
+Odczekaj kilka minut, a następnie sprawdź wykres `TargetResponseTime` dla ALB i backend target group w CloudWatch oraz stan alarmu w CloudWatch → Alarms. Alarm wymaga co najmniej jednego okresu z próbkami; dostarczenie maila wymaga potwierdzonej subskrypcji SNS. Nie ustawiaj parametru w zwykłym ruchu produkcyjnym.
 
 Terraform tworzy serwisy w publicznych podsieciach z publicznym adresem IP, aby mogły pobrać obrazy ECR bez NAT Gateway. RDS pozostaje w podsieciach prywatnych; port 5432 jest dostępny tylko z grupy bezpieczeństwa backendu. ALB udostępnia HTTP, więc to wdrożenie laboratoryjne i nie powinno przenosić prawdziwych haseł użytkowników bez dodania HTTPS.
 
