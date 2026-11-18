@@ -21,20 +21,3 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "media" {
   }
 }
 
-resource "aws_s3_bucket_versioning" "media" {
-  bucket = data.aws_s3_bucket.media.id
-
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-output "s3_media_bucket_name" {
-  description = "Nazwa bucketu na pliki multimedialne"
-  value       = data.aws_s3_bucket.media.bucket
-}
-
-output "s3_media_bucket_arn" {
-  description = "ARN bucketu S3 na pliki multimedialne"
-  value       = data.aws_s3_bucket.media.arn
-}

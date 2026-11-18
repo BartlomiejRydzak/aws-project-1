@@ -70,7 +70,6 @@ resource "aws_cloudwatch_metric_alarm" "backend_response_time" {
   statistic           = "Average"
   period              = 60
   evaluation_periods  = 1
-  datapoints_to_alarm = 1
   threshold           = var.alb_response_time_threshold_seconds
   comparison_operator = "GreaterThanThreshold"
   treat_missing_data  = "notBreaching"
@@ -134,9 +133,6 @@ resource "aws_ecs_task_definition" "backend" {
       { name = "AWS_REGION", value = var.aws_region },
       { name = "S3_BUCKET", value = data.aws_s3_bucket.media.bucket },
       { name = "S3_ENABLED", value = "true" },
-      { name = "DB_HOST", value = aws_db_instance.postgres.address },
-      { name = "DB_PORT", value = "5432" },
-      { name = "DB_NAME", value = aws_db_instance.postgres.db_name },
       { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${aws_db_instance.postgres.address}:5432/${aws_db_instance.postgres.db_name}" },
       { name = "AUTH_ENABLED", value = "true" },
       { name = "COGNITO_CLIENT_ID", value = aws_cognito_user_pool_client.frontend.id },
@@ -222,10 +218,3 @@ output "frontend_ecr_repository_url" {
   value = aws_ecr_repository.frontend.repository_url
 }
 
-output "api_latency_alarm_name" {
-  value = aws_cloudwatch_metric_alarm.backend_response_time.alarm_name
-}
-
-output "api_latency_sns_topic_arn" {
-  value = aws_sns_topic.api_latency.arn
-}

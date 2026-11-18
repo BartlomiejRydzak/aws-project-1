@@ -63,13 +63,6 @@ variable "alb_response_time_threshold_seconds" {
   default     = 3
 }
 
-data "aws_caller_identity" "current" {}
-
-output "aws_account_id" {
-  description = "ID konta AWS"
-  value       = data.aws_caller_identity.current.account_id
-}
-
 output "aws_region" {
   value = var.aws_region
 }

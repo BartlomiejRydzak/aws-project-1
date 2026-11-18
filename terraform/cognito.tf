@@ -12,12 +12,11 @@ resource "aws_cognito_user_pool" "app_users" {
   }
 
   password_policy {
-    minimum_length                   = 8
-    require_lowercase                = true
-    require_uppercase                = true
-    require_numbers                  = true
-    require_symbols                  = true
-    temporary_password_validity_days = 7
+    minimum_length      = 8
+    require_lowercase   = true
+    require_uppercase   = true
+    require_numbers     = true
+    require_symbols     = true
   }
 
   account_recovery_setting {
@@ -56,9 +55,7 @@ resource "aws_cognito_user_pool_client" "frontend" {
   generate_secret = false
 
   explicit_auth_flows = [
-    "ALLOW_USER_SRP_AUTH",
-    "ALLOW_USER_PASSWORD_AUTH",
-    "ALLOW_REFRESH_TOKEN_AUTH"
+    "ALLOW_USER_PASSWORD_AUTH"
   ]
 
   prevent_user_existence_errors = "ENABLED"
@@ -74,17 +71,3 @@ resource "aws_cognito_user_pool_client" "frontend" {
   }
 }
 
-output "cognito_user_pool_id" {
-  description = "ID puli użytkowników Cognito"
-  value       = aws_cognito_user_pool.app_users.id
-}
-
-output "cognito_user_pool_client_id" {
-  description = "Publiczny identyfikator klienta frontendowego"
-  value       = aws_cognito_user_pool_client.frontend.id
-}
-
-output "cognito_region" {
-  description = "Region AWS dla Cognito"
-  value       = var.aws_region
-}
